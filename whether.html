@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>City Weather Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            background-image: url("whether.jpg");
+            background-size: cover;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 400px;
+            margin: 60px auto 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+            padding: 2rem;
+            text-align: center;
+        }
+        h1 {
+            color: #4361ee;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+        form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input[type=text] {
+            flex: 2;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        select {
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+        button {
+            background: #4361ee;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        button:hover {
+            background: #2746b0;
+        }
+        #weatherResult {
+            margin-top: 1rem;
+        }
+        .weather-card {
+            background: #f6f9ff;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 12px rgba(67,97,238,0.10);
+            text-align: left;
+        }
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .weather-icon {
+            font-size: 3rem;
+            width: 60px;
+            text-align: center;
+            color: #4361ee;
+        }
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2746b0;
+        }
+        .weather-details {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+        .loading {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: #4361ee;
+        }
+        @media (max-width: 500px) {
+            .container {
+                max-width: 98vw;
+                padding: 1rem;
+            }
+            form {
+                flex-direction: column;
+                gap: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1><i class="fa-solid fa-cloud-sun"></i> City Weather Search</h1>
+    <form id="weatherForm">
+        <input type="text" id="cityInput" placeholder="Enter city name..." required>
+        <select id="unitSelect">
+            <option value="metric">°C</option>
+            <option value="imperial">°F</option>
+        </select>
+        <button type="submit"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+    </form>
+    <div id="weatherResult"></div>
+</div>
+<script>
+    // ----- IMPORTANT: Insert your OpenWeatherMap API key below -----
+    const API_KEY = '1be258e9ee38439db3c8bcf6af4016f0'; // <--- Replace with your API key!
+    // ---------------------------------------------------------------
+
+    const weatherForm = document.getElementById('weatherForm');
+    const cityInput = document.getElementById('cityInput');
+    const unitSelect = document.getElementById('unitSelect');
+    const weatherResult = document.getElementById('weatherResult');
+
+    const weatherIcons = {
+        '01d': 'fa-sun',    // clear sky (day)
+        '01n': 'fa-moon',   // clear sky (night)
+        '02d': 'fa-cloud-sun',
+        '02n': 'fa-cloud-moon',
+        '03d': 'fa-cloud',
+        '03n': 'fa-cloud',
+        '04d': 'fa-cloud-meatball',
+        '04n': 'fa-cloud-meatball',
+        '09d': 'fa-cloud-rain',
+        '09n': 'fa-cloud-rain',
+        '10d': 'fa-cloud-sun-rain',
+        '10n': 'fa-cloud-moon-rain',
+        '11d': 'fa-bolt',
+        '11n': 'fa-bolt',
+        '13d': 'fa-snowflake',
+        '13n': 'fa-snowflake',
+        '50d': 'fa-smog',
+        '50n': 'fa-smog'
+    };
+
+    weatherForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const city = cityInput.value.trim();
+        const unit = unitSelect.value;
+        weatherResult.innerHTML = `<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>`;
+
+        try {
+            const resp = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=${unit}&appid=${API_KEY}`);
+            if (!resp.ok) {
+                const data = await resp.json();
+                throw new Error(data.message || "Error fetching weather");
+            }
+            const data = await resp.json();
+
+            const iconCode = data.weather[0].icon;
+            const iconClass = weatherIcons[iconCode] || 'fa-cloud';
+            const tempUnit = unit === 'metric' ? '°C' : '°F';
+            const speedUnit = unit === 'metric' ? 'km/h' : 'mph';
+
+            weatherResult.innerHTML = `
+                <div class="weather-card">
+                    <div class="weather-main">
+                        <span class="weather-icon"><i class="fas ${iconClass}"></i></span>
+                        <div>
+                            <div class="weather-temp">${Math.round(data.main.temp)}${tempUnit}</div>
+                            <div><strong>${data.name}, ${data.sys.country}</strong></div>
+                            <div>${data.weather[0].description}</div>
+                        </div>
+                    </div>
+                    <div class="weather-details">
+                        <div>Humidity: <strong>${data.main.humidity}%</strong></div>
+                        <div>Wind: <strong>${Math.round(data.wind.speed)} ${speedUnit}</strong></div>
+                        <div>Feels Like: <strong>${Math.round(data.main.feels_like)}${tempUnit}</strong></div>
+                        <div>Pressure: <strong>${data.main.pressure} hPa</strong></div>
+                        <div>Visibility: <strong>${data.visibility / 1000} km</strong></div>
+                        <div>Min/Max: <strong>${Math.round(data.main.temp_min)}${tempUnit} / ${Math.round(data.main.temp_max)}${tempUnit}</strong></div>
+                        <div>Timezone: <strong>UTC${data.timezone >= 0 ? '+' : ''}${data.timezone/3600}</strong></div>
+                    </div>
+                </div>
+                `;
+        } catch (err) {
+            weatherResult.innerHTML = `<div class="error-message"><i class="fa-solid fa-circle-exclamation"></i> ${err.message}</div>`;
+        }
+    });
+</script>
+</body>
+</html>
